@@ -26,7 +26,8 @@ char* keywords[] = {
 
 char* garbage_var[] = { "int var_r;\nvar_r = 423;\n", "char var_r2;\nvar_r2 = 'c';\n", NULL };
 char* garbage_cycles[] = { "int sm_vr_1 = 0;\nfor(int i = 0; i < 32; i++){\nsm_vr_1++;\n}\n", "int sm_vr_2 = 0;\nwhile(sm_vr_2 != 43){\nsm_vr_2++;\n}\n", NULL };
-char* garbage_funcs[] = { "int func_var_1(){\nint a = 10;\nint b = 12;\n int sum = (a + b)*b;\nreturn sum;\n}\n", "int func_var_2(){\nint c = 213;\nint j = 64;\n int result = c * j + j;\nreturn result;\n}\n" };
+char* garbage_funcs[] = { "int func_var_1(){\nint a = 10;\nint b = 12;\n int sum = (a + b)*b;\nreturn sum;\n}\n", "int func_var_2(){\nint c = 213;\nint j = 64;\n int result = c * j + j;\nreturn result;\n}\n", NULL };
+char* garbage_funcs_call[] = { "func_var_1();\n", "func_var_2();\n", NULL };
 
 void read_file(FILE* f) {
 	prog_text.text = (char*)malloc(BUF);
@@ -149,8 +150,8 @@ void find_and_replace_var() {
 			while (i < prog_text.len && (isalnum(prog_text.text[i]) || prog_text.text[i] == '_')) {
 				cur_word[pos++] = prog_text.text[i++];
 			}
-			cur_word[pos] = '\0';
-			if (macros_flag) {
+				cur_word[pos] = '\0';
+				if (macros_flag) {
 				macros_flag = 0;
 				if ((i + 1) < prog_text.len && !(isdigit(prog_text.text[i + 1]))) {
 					continue;
@@ -201,7 +202,7 @@ void find_and_replace_var() {
 					i_aft++;
 				}
 				i += razn;
-				printf("%s", prog_text.text);
+				//printf("%s", prog_text.text);
 			}
 
 
@@ -229,7 +230,7 @@ void find_and_replace_var() {
 					i++;
 				} continue;
 			}
-			if (prog_text.text[i] == '(') {
+			if (prog_text.text[i] == '(' || prog_text.text[i] == '*' || prog_text.text[i] == '+' || prog_text.text[i] == '-' || prog_text.text[i] == '/' || prog_text.text[i] == '^') {
 				continue;
 			}
 			while (i < prog_text.len && prog_text.text[i] != ' ' && prog_text.text[i] != '\n' && prog_text.text[i] != '\t') i++;
@@ -239,7 +240,100 @@ void find_and_replace_var() {
 }
 
 void insert_garbage() {
+	int i = 0;
+	int flag_main = 0;
+	while (prog_text.text[i] != '\0') {
+		int start = -1;
+		int macros_flag = 0;
+		int sum_len_shift = 0;
+		int i_mas = 0;
+		if (prog_text.text[i] == '#') {
+			while (prog_text.text[i] != '\n') i++;
+			i++;
+			if (prog_text.text[i] == '#') continue;
+			
+			start = i;
+			while (garbage_funcs[i_mas] != NULL) {
+				sum_len_shift += strlen(garbage_funcs[i_mas]);
+				i_mas++;
+			}
+			i_mas = 0;
+			int new_len = prog_text.len + sum_len_shift;
+			prog_text.text = (char*)realloc(prog_text.text, (new_len + 1));
+			prog_text.len = new_len;
+			for (int i_2 = prog_text.len; i_2 >= start; i_2--) {
+				prog_text.text[i_2] = prog_text.text[i_2 - sum_len_shift];
+			}
+			while (garbage_funcs[i_mas] != NULL) {
+				for (int i_func = 0; i_func < strlen(garbage_funcs[i_mas]); i_func++) {
+					prog_text.text[i++] = garbage_funcs[i_mas][i_func];
+				}
+				i_mas++;
+			}
+			continue;
+		}
+		if (prog_text.text[i] == '\"') {
+			while (prog_text.text[i] != '\"') i++;
+			i++;
+			continue;
+		}
 
+
+		if ((i > 0) && (i + 5 < prog_text.len) &&  prog_text.text[i - 1] == ' ' && prog_text.text[i] == 'm' && prog_text.text[i + 1] == 'a' && prog_text.text[i + 2] == 'i' && prog_text.text[i + 3] == 'n'  && (prog_text.text[i + 4] == '(' || (prog_text.text[i + 4] == ' ' && prog_text.text[i + 5] == '('))) {
+			while (prog_text.text[i] != '{') i++;
+			i++;
+			flag_main = 1;
+			continue;
+		}
+		if (flag_main){
+			start = i;
+			i_mas = 0;
+			while (garbage_funcs[i_mas] != NULL) {
+				sum_len_shift += strlen(garbage_funcs[i_mas]);
+				i_mas++;
+			}
+			i_mas = 0;
+			while (garbage_cycles[i_mas] != NULL) {
+				sum_len_shift += strlen(garbage_cycles[i_mas]);
+				i_mas++;
+			}
+			i_mas = 0;
+			while (garbage_funcs_call[i_mas] != NULL) {
+				sum_len_shift += strlen(garbage_funcs_call[i_mas]);
+				i_mas++;
+			}
+			i_mas = 0;
+			int new_len = prog_text.len + sum_len_shift;
+			prog_text.text = (char*)realloc(prog_text.text, (new_len + 1));
+			prog_text.len = new_len;
+			for (int i_2 = prog_text.len; i_2 >= start; i_2--) {
+				prog_text.text[i_2] = prog_text.text[i_2 - sum_len_shift];
+			}
+			while (garbage_funcs[i_mas] != NULL) {
+				for (int i_func = 0; i_func < strlen(garbage_funcs[i_mas]); i_func++) {
+					prog_text.text[i++] = garbage_funcs[i_mas][i_func];
+				}
+				i_mas++;
+			}
+			i_mas = 0;
+			while (garbage_cycles[i_mas] != NULL) {
+				for (int i_func = 0; i_func < strlen(garbage_cycles[i_mas]); i_func++) {
+					prog_text.text[i++] = garbage_cycles[i_mas][i_func];
+				}
+				i_mas++;
+			}
+			i_mas = 0;
+			while (garbage_funcs_call[i_mas] != NULL) {
+				for (int i_func = 0; i_func < strlen(garbage_funcs_call[i_mas]); i_func++) {
+					prog_text.text[i++] = garbage_funcs_call[i_mas][i_func];
+				}
+				i_mas++;
+			}
+			flag_main = 0;
+			//printf("%c", prog_text.text[prog_text.len]);
+		}
+		i++;
+	}
 }
 
 void main() {
@@ -247,9 +341,9 @@ void main() {
 	FILE* output_f = fopen("out_prog.c", "w");
 	read_file(input_f);
 
-
-
+	insert_garbage();
 	find_and_replace_var();
+
 	del_comms();
 	del_space();
 	printf("%s", prog_text.text);
