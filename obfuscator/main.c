@@ -247,8 +247,9 @@ void main() {
 	FILE* output_f = fopen("out_prog.c", "w");
 	read_file(input_f);
 
-	find_and_replace_var();
 
+
+	find_and_replace_var();
 	del_comms();
 	del_space();
 	printf("%s", prog_text.text);
