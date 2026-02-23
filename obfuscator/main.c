@@ -36,8 +36,8 @@ char* keywords[] = {
 "int","char","float","double","void","short","long","signed","unsigned","struct","union","enum","const","volatile","static","extern","register","auto","if","else","switch","case","default","for","while","do","break","continue","goto","return","sizeof","typedef","printf","scanf","fopen","fclose","fscanf","getchar","strlen","strcmp","malloc","free","rand","srand","atoi","main", "FILE", NULL };
 
 char* garbage_var[] = { "int var_r;\nvar_r = 423;\n", "char var_r2;\nvar_r2 = 'c';\n", NULL };
-char* garbage_cycles[] = { "int sm_vr_1 = 0;\nfor(int i = 0; i < 32; i++){\nsm_vr_1++;\n}\n", "int sm_vr_2 = 0;\nwhile(sm_vr_2 != 43){\nsm_vr_2++;\n}\n", NULL };
-char* garbage_funcs[] = { "int func_var_1(){\nint a = 10;\nint b = 12;\n int sum = (a + b)*b;\nreturn sum;\n}\n", "int func_var_2(){\nint c = 213;\nint j = 64;\n int result = c * j + j;\nreturn result;\n}\n", NULL };
+char* garbage_cycles[] = { "int sm_vr_1 = 0;\nfor(int i = 0; i < 32; i++){\n\tsm_vr_1++;\n}\n", "int sm_vr_2 = 0;\nwhile(sm_vr_2 != 43){\n\tsm_vr_2++;\n}\n", NULL };
+char* garbage_funcs[] = { "int func_var_1() {\n\tint a = 10;\n\tint b = 12;\n\tint sum = (a + b)*b;\n\treturn sum;\n}\n", "int func_var_2() {\n\tint c = 213;\n\tint j = 64;\n\tint result = c * j + j;\n\treturn result;\n}\n", NULL };
 char* garbage_funcs_call[] = { "func_var_1();\n", "func_var_2();\n", NULL };
 
 void read_file(FILE* f) {
@@ -368,20 +368,15 @@ int skip(int i) {
 
 void add_prototypes(int start) {
 	int sum_lens = 0;
-	printf("%c", prog_text.text[start]);
-
 	for (int i = 0; i < arr_funcs_cnt; i++) {
 		sum_lens += strlen(arr_func[i].prototype);
 	}
-	int razn = sum_lens + (arr_funcs_cnt * 2) + 1;
-	prog_text.text = (char*)realloc(prog_text.text, prog_text.len + razn);
+	int razn = sum_lens + (arr_funcs_cnt * 2);
+	prog_text.text = (char*)realloc(prog_text.text, prog_text.len + razn + 1);
 	prog_text.len += razn;
-	for (int i_text = prog_text.len - 1; i_text >= start + razn; i_text--) {
-		prog_text.text[i_text] = prog_text.text[i_text - razn + 1];
-		printf("%s", prog_text.text);
-
+	for (int i_text = prog_text.len; i_text >= start + razn - 2; i_text--) {
+		prog_text.text[i_text] = prog_text.text[i_text - razn];
 	}
-	printf("%s", prog_text.text);
 
 	int cur_i_text = start;
 	for (int i_arr = 0; i_arr < arr_funcs_cnt; i_arr++) {
@@ -390,11 +385,8 @@ void add_prototypes(int start) {
 		}
 		prog_text.text[cur_i_text++] = ';';
 		prog_text.text[cur_i_text++] = '\n';
+
 	}
-	printf("%s", prog_text.text);
-
-	printf("%c", prog_text.text[prog_text.len - 1]);
-
 
 }
 
@@ -465,7 +457,7 @@ void main() {
 	FILE* output_f = fopen("out_prog.c", "w");
 	read_file(input_f);
 
-	//insert_garbage();
+	insert_garbage();
 	shuffle_func();
 
 	//find_and_replace_var();
