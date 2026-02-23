@@ -45,4 +45,4 @@ void main() {
 	fclose(password_f);
 	getchar();
 	getchar();
-}//testik
+}//testikk

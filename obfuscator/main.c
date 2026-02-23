@@ -6,6 +6,7 @@
 #define BUF 128
 #define MAX_LEN_NAMES 64
 #define MAX_LEN_ARR_NAMES 64
+#define MAX_LEN_PROT 256
 
 typedef struct {
 	char* text;
@@ -17,9 +18,19 @@ typedef struct {
 	char after[MAX_LEN_NAMES];
 }arrName;
 
+typedef struct {
+	char prototype[MAX_LEN_PROT];
+	char* text;
+	unsigned int start;
+} funcs;
+
 text_s prog_text;
 unsigned int arr_names_cnt;
 arrName prog_var[MAX_LEN_ARR_NAMES];
+
+funcs arr_func[MAX_LEN_ARR_NAMES];
+unsigned int arr_funcs_cnt;
+
 
 char* keywords[] = {
 "int","char","float","double","void","short","long","signed","unsigned","struct","union","enum","const","volatile","static","extern","register","auto","if","else","switch","case","default","for","while","do","break","continue","goto","return","sizeof","typedef","printf","scanf","fopen","fclose","fscanf","getchar","strlen","strcmp","malloc","free","rand","srand","atoi","main", "FILE", NULL };
@@ -336,17 +347,131 @@ void insert_garbage() {
 	}
 }
 
+int skip(int i) {
+	if (prog_text.text[i] == '\"') {
+		while (prog_text.text[i] != '\"') i++;
+	}
+	else if (prog_text.text[i] == '/' && prog_text.text[i + 1] == '*') {
+		while (!(prog_text.text[i + 1] == '/' && prog_text.text[i] == '*')) i++;
+		i += 2;
+	}
+	else if (prog_text.text[i] == '/' && prog_text.text[i + 1] == '/') {
+		while (!(prog_text.text[i] == '\n' || prog_text.text[i] == '\0')) i++;
+	}
+	else if (prog_text.text[i] == '#') {
+		while (prog_text.text[i] != '\n') {
+			i++;
+		}
+	}
+	return i;
+}
+
+void add_prototypes(int start) {
+	int sum_lens = 0;
+	printf("%c", prog_text.text[start]);
+
+	for (int i = 0; i < arr_funcs_cnt; i++) {
+		sum_lens += strlen(arr_func[i].prototype);
+	}
+	int razn = sum_lens + (arr_funcs_cnt * 2) + 1;
+	prog_text.text = (char*)realloc(prog_text.text, prog_text.len + razn);
+	prog_text.len += razn;
+	for (int i_text = prog_text.len - 1; i_text >= start + razn; i_text--) {
+		prog_text.text[i_text] = prog_text.text[i_text - razn + 1];
+		printf("%s", prog_text.text);
+
+	}
+	printf("%s", prog_text.text);
+
+	int cur_i_text = start;
+	for (int i_arr = 0; i_arr < arr_funcs_cnt; i_arr++) {
+		for (int cur_i_mas = 0; cur_i_mas < strlen(arr_func[i_arr].prototype); cur_i_mas++) {
+			prog_text.text[cur_i_text++] = arr_func[i_arr].prototype[cur_i_mas];
+		}
+		prog_text.text[cur_i_text++] = ';';
+		prog_text.text[cur_i_text++] = '\n';
+	}
+	printf("%s", prog_text.text);
+
+	printf("%c", prog_text.text[prog_text.len - 1]);
+
+
+}
+
+
+void shuffle_func() {
+	int i = 0;
+	int read_func = 0;
+	int first_func_flag = -1;
+	while (prog_text.text[i] != '\0' && i < prog_text.len) {	//считываниеп строк
+		int start = -1;
+		if (isalpha(prog_text.text[i]) || prog_text.text[i] == '_') {
+			char cur_word[MAX_LEN_NAMES];
+			int pos = 0;
+			start = i;
+			while (i < prog_text.len && (isalnum(prog_text.text[i]) || prog_text.text[i] == '_')) {
+				cur_word[pos++] = prog_text.text[i++];
+			}
+			cur_word[pos] = '\0';
+			if (is_keyword(cur_word)) {
+				if (first_func_flag == -1){
+					first_func_flag = start;
+				}
+				if ((i > 0) && (i + 6 < prog_text.len) && prog_text.text[i] == ' ' && prog_text.text[i + 1] == 'm' && prog_text.text[i + 2] == 'a' && prog_text.text[i + 3] == 'i' && prog_text.text[i + 4] == 'n' && (prog_text.text[i + 5] == '(' || (prog_text.text[i + 5] == ' ' && prog_text.text[i + 6] == '('))) {
+					break;
+				}
+				while (prog_text.text[i] != '\0') {
+					cur_word[pos++] = prog_text.text[i++];
+					if (prog_text.text[i] == ';') break;
+					if (prog_text.text[i] == '{') {		//prototype
+						cur_word[pos] = '\0';	//add prototype
+						strcpy(arr_func[arr_funcs_cnt].prototype, cur_word);
+						int op_s = 1;
+						int cl_s = 0;
+						arr_func[arr_funcs_cnt].text = (char*)malloc(BUF);
+						cur_word[pos++] = '{';
+						strcpy(arr_func[arr_funcs_cnt].text, cur_word);
+						while (op_s != cl_s){
+							if ((start - i) % BUF == 0 && (start - i != 0)) {
+								arr_func[arr_funcs_cnt].text = (char*)realloc(arr_func[arr_funcs_cnt].text, (i + BUF));
+							}
+							arr_func[arr_funcs_cnt].text[pos++] = prog_text.text[++i];
+
+							if (prog_text.text[i] == '}')
+								cl_s++;
+							else if (prog_text.text[i] == '{')
+								op_s++;
+						}
+						arr_func[arr_funcs_cnt].text[pos] = '\0';
+						arr_func[arr_funcs_cnt].text = (char*)realloc(arr_func[arr_funcs_cnt].text, (i - start + 2));
+						arr_func[arr_funcs_cnt].start = start;
+						arr_funcs_cnt++;
+						break;
+					}
+				}
+			}
+
+
+		}
+		i = skip(i) + 1;
+	}
+	add_prototypes(first_func_flag);
+
+}
+
+
 void main() {
 	FILE* input_f = fopen("prog.c", "r");
 	FILE* output_f = fopen("out_prog.c", "w");
 	read_file(input_f);
 
-	insert_garbage();
-	find_and_replace_var();
+	//insert_garbage();
+	shuffle_func();
 
-	del_comms();
-	del_space();
-	printf("%s", prog_text.text);
+	//find_and_replace_var();
+	//del_comms();
+	//del_space();
+	//printf("%s", prog_text.text);
 	fprintf(output_f, "%s", prog_text.text);
 	//printf("%d %d", isdigit('{'), isalpha('{'));
 
