@@ -182,7 +182,7 @@ void find_and_replace_var() {
 				sprintf(prog_var[arr_names_cnt].after, "vr_fc%d", (arr_names_cnt + 1));
 				arr_names_cnt++;
 			}
-			if (strlen(prog_var[k].before) > strlen(prog_var[k].after)){
+			if (strlen(prog_var[k].before) >= strlen(prog_var[k].after)){
 				int i_aft = 0;
 				while(prog_var[k].after[i_aft] != '\0') {
 					prog_text.text[start + i_aft] = prog_var[k].after[i_aft];
