@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 #define BUF 128
 #define MAX_LEN_NAMES 64
 #define MAX_LEN_ARR_NAMES 64
@@ -21,7 +22,6 @@ typedef struct {
 typedef struct {
 	char prototype[MAX_LEN_PROT];
 	char* text;
-	unsigned int start;
 } funcs;
 
 text_s prog_text;
@@ -30,7 +30,8 @@ arrName prog_var[MAX_LEN_ARR_NAMES];
 
 funcs arr_func[MAX_LEN_ARR_NAMES];
 unsigned int arr_funcs_cnt;
-
+unsigned int arr_funcs_starts[MAX_LEN_ARR_NAMES];
+unsigned int arr_funcs_ends[MAX_LEN_ARR_NAMES];
 
 char* keywords[] = {
 "int","char","float","double","void","short","long","signed","unsigned","struct","union","enum","const","volatile","static","extern","register","auto","if","else","switch","case","default","for","while","do","break","continue","goto","return","sizeof","typedef","printf","scanf","fopen","fclose","fscanf","getchar","strlen","strcmp","malloc","free","rand","srand","atoi","main", "FILE", NULL };
@@ -315,7 +316,6 @@ void insert_garbage() {
 			for (int i_2 = prog_text.len; i_2 >= start; i_2--) {
 				prog_text.text[i_2] = prog_text.text[i_2 - sum_len_shift];
 			}
-			printf("%s", prog_text.text);
 
 			i_mas = 0;
 			while (garbage_cycles[i_mas] != NULL) {
@@ -357,7 +357,7 @@ int skip(int i) {
 	return i;
 }
 
-void add_prototypes(int start) {
+int add_prototypes(int start) {
 	int sum_lens = 0;
 	for (int i = 0; i < arr_funcs_cnt; i++) {
 		sum_lens += strlen(arr_func[i].prototype);
@@ -376,11 +376,18 @@ void add_prototypes(int start) {
 		}
 		prog_text.text[cur_i_text++] = ';';
 		prog_text.text[cur_i_text++] = '\n';
-
 	}
-
+	return razn;
 }
 
+void shift_arr(unsigned int cur_pos, unsigned int shift) {
+	unsigned int i = cur_pos;
+	while (arr_funcs_ends[i] != 0) {
+		arr_funcs_starts[i] += shift;
+		arr_funcs_ends[i] += shift;
+		i++;
+	}
+}
 
 void shuffle_func() {
 	int i = 0;
@@ -415,19 +422,21 @@ void shuffle_func() {
 						cur_word[pos++] = '{';
 						strcpy(arr_func[arr_funcs_cnt].text, cur_word);
 						while (op_s != cl_s){
-							if ((start - i) % BUF == 0 && (start - i != 0)) {
+							if ((i - start + 1) % BUF == 0 && (i - start != 0)) {
 								arr_func[arr_funcs_cnt].text = (char*)realloc(arr_func[arr_funcs_cnt].text, (i + BUF));
+								
 							}
 							arr_func[arr_funcs_cnt].text[pos++] = prog_text.text[++i];
-
 							if (prog_text.text[i] == '}')
 								cl_s++;
 							else if (prog_text.text[i] == '{')
 								op_s++;
 						}
 						arr_func[arr_funcs_cnt].text[pos] = '\0';
+
 						arr_func[arr_funcs_cnt].text = (char*)realloc(arr_func[arr_funcs_cnt].text, (i - start + 2));
-						arr_func[arr_funcs_cnt].start = start;
+						arr_funcs_starts[arr_funcs_cnt] = start;
+						arr_funcs_ends[arr_funcs_cnt] = i;
 						arr_funcs_cnt++;
 						break;
 					}
@@ -438,14 +447,54 @@ void shuffle_func() {
 		}
 		i = skip(i) + 1;
 	}
-	add_prototypes(first_func_flag);
+	int cur_shift = add_prototypes(first_func_flag);
+	shift_arr(0, cur_shift);
 
 	//shuffle order
+	srand(time(NULL));
 	for (int i = arr_funcs_cnt - 1; i > 0; i--) {
 		int j = rand() % (i + 1);
 		funcs temp = arr_func[i];
 		arr_func[i] = arr_func[j];
 		arr_func[j] = temp;
+	}
+
+	for (int arr_i = 0; arr_i < arr_funcs_cnt; arr_i++) {
+		int i = arr_funcs_ends[arr_i];
+		int razn;
+		if ((arr_funcs_ends[arr_i] - arr_funcs_starts[arr_i]) >= (strlen(arr_func[arr_i].text) - 1)) {
+			int i_aft = 0;
+			while (arr_func[arr_i].text[i_aft] != '\0') {
+				prog_text.text[arr_funcs_starts[arr_i] + i_aft] = arr_func[arr_i].text[i_aft];
+				i_aft++;
+
+			}
+			while (prog_text.text[i + 1] != '\0') {
+				prog_text.text[arr_funcs_starts[arr_i] + i_aft] = prog_text.text[i + 1];
+				i++; i_aft++;
+
+			}
+			prog_text.text[arr_funcs_starts[arr_i] + i_aft] = '\0';
+			razn = (arr_funcs_ends[arr_i] - arr_funcs_starts[arr_i]) - (strlen(arr_func[arr_i].text) - 1);
+			prog_text.len -= razn;
+			prog_text.text = (char*)realloc(prog_text.text, (prog_text.len + 1));
+			shift_arr(arr_i, -razn);
+		}
+		else {
+			razn = abs(arr_funcs_ends[arr_i] - arr_funcs_starts[arr_i] - (strlen(arr_func[arr_i].text) - 1));
+			prog_text.len += razn;
+			int i_aft = 0;
+			prog_text.text = (char*)realloc(prog_text.text, (prog_text.len + 1));
+			for (int i_2 = prog_text.len; i_2 >= (i + razn); i_2--) {
+				prog_text.text[i_2] = prog_text.text[i_2 - razn];
+			}
+			while (arr_func[arr_i].text[i_aft] != '\0') {
+				prog_text.text[arr_funcs_starts[arr_i] + i_aft] = arr_func[arr_i].text[i_aft];
+				i_aft++;
+			}
+			shift_arr(arr_i, razn);
+
+		}
 	}
 
 }
@@ -458,15 +507,14 @@ void main() {
 
 	insert_garbage();
 	shuffle_func();
+	find_and_replace_var();
+	del_comms();
+	del_space();
 
-	//find_and_replace_var();
-	//del_comms();
-	//del_space();
-	//printf("%s", prog_text.text);
 	fprintf(output_f, "%s", prog_text.text);
-	//printf("%d %d", isdigit('{'), isalpha('{'));
 
 	free(prog_text.text);
 	fclose(input_f);
+	fclose(output_f);
 
 }
