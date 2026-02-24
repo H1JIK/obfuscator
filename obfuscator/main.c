@@ -8,6 +8,7 @@
 #define MAX_LEN_NAMES 64
 #define MAX_LEN_ARR_NAMES 64
 #define MAX_LEN_PROT 256
+#define MAX_PARAMS 5
 
 typedef struct {
 	char* text;
@@ -502,19 +503,37 @@ void shuffle_func() {
 
 void main() {
 	FILE* input_f = fopen("prog.c", "r");
+	FILE* config_f = fopen("config.txt", "r");
 	FILE* output_f = fopen("out_prog.c", "w");
 	read_file(input_f);
+	char cur_par[BUF];
+	int params[MAX_PARAMS];
 
+	for (int i = 0; i < MAX_PARAMS; i++) {
+		fgets(cur_par, BUF - 1, config_f);
+		params[i] = cur_par[strlen(cur_par) - 3] - 48;
+	}
+	
+	if (params[0])
 	insert_garbage();
+	if (params[1])
 	shuffle_func();
+	if (params[2])
 	find_and_replace_var();
+	if (params[3])
 	del_comms();
+	if (params[4])
 	del_space();
 
 	fprintf(output_f, "%s", prog_text.text);
 
+	for (int i = 0; i < arr_funcs_cnt; i++) {
+		free(arr_func[i].text);
+	}
+
 	free(prog_text.text);
 	fclose(input_f);
 	fclose(output_f);
+	fclose(config_f);
 
 }

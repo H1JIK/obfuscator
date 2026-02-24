@@ -1,0 +1,6 @@
+garbage_data==1;
+shuffle_functions==1;
+rename_vars==1;
+delete_comments==1;
+delete_spaces==1;
+-----------end_params-----------
