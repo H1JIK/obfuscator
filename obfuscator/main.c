@@ -35,10 +35,10 @@ unsigned int arr_funcs_cnt;
 char* keywords[] = {
 "int","char","float","double","void","short","long","signed","unsigned","struct","union","enum","const","volatile","static","extern","register","auto","if","else","switch","case","default","for","while","do","break","continue","goto","return","sizeof","typedef","printf","scanf","fopen","fclose","fscanf","getchar","strlen","strcmp","malloc","free","rand","srand","atoi","main", "FILE", NULL };
 
-char* garbage_var[] = { "int var_r;\nvar_r = 423;\n", "char var_r2;\nvar_r2 = 'c';\n", NULL };
-char* garbage_cycles[] = { "int sm_vr_1 = 0;\nfor(int i = 0; i < 32; i++){\n\tsm_vr_1++;\n}\n", "int sm_vr_2 = 0;\nwhile(sm_vr_2 != 43){\n\tsm_vr_2++;\n}\n", NULL };
+char* garbage_var[] = { "\tint var_r;\t\nvar_r = 423;\n", "\tchar var_r2;\n\tvar_r2 = 'c';\n", NULL };
+char* garbage_cycles[] = { "\n\tint sm_vr_1 = 0;\n\tfor(int i = 0; i < 32; i++){\n\t\tsm_vr_1++;\n\t}\n", "\tint sm_vr_2 = 0;\n\twhile(sm_vr_2 != 43){\n\t\tsm_vr_2++;\n\t}\n", NULL };
 char* garbage_funcs[] = { "int func_var_1() {\n\tint a = 10;\n\tint b = 12;\n\tint sum = (a + b)*b;\n\treturn sum;\n}\n", "int func_var_2() {\n\tint c = 213;\n\tint j = 64;\n\tint result = c * j + j;\n\treturn result;\n}\n", NULL };
-char* garbage_funcs_call[] = { "func_var_1();\n", "func_var_2();\n", NULL };
+char* garbage_funcs_call[] = { "\tfunc_var_1();\n", "\tfunc_var_2();\n", NULL };
 
 void read_file(FILE* f) {
 	prog_text.text = (char*)malloc(BUF);
@@ -284,7 +284,7 @@ void insert_garbage() {
 			continue;
 		}
 		if (prog_text.text[i] == '\"') {
-			while (prog_text.text[i] != '\"') i++;
+			while (prog_text.text [i] != '\"') i++;
 			i++;
 			continue;
 		}
@@ -298,11 +298,6 @@ void insert_garbage() {
 		}
 		if (flag_main){
 			start = i;
-			i_mas = 0;
-			while (garbage_funcs[i_mas] != NULL) {
-				sum_len_shift += strlen(garbage_funcs[i_mas]);
-				i_mas++;
-			}
 			i_mas = 0;
 			while (garbage_cycles[i_mas] != NULL) {
 				sum_len_shift += strlen(garbage_cycles[i_mas]);
@@ -320,12 +315,8 @@ void insert_garbage() {
 			for (int i_2 = prog_text.len; i_2 >= start; i_2--) {
 				prog_text.text[i_2] = prog_text.text[i_2 - sum_len_shift];
 			}
-			while (garbage_funcs[i_mas] != NULL) {
-				for (int i_func = 0; i_func < strlen(garbage_funcs[i_mas]); i_func++) {
-					prog_text.text[i++] = garbage_funcs[i_mas][i_func];
-				}
-				i_mas++;
-			}
+			printf("%s", prog_text.text);
+
 			i_mas = 0;
 			while (garbage_cycles[i_mas] != NULL) {
 				for (int i_func = 0; i_func < strlen(garbage_cycles[i_mas]); i_func++) {
@@ -448,6 +439,14 @@ void shuffle_func() {
 		i = skip(i) + 1;
 	}
 	add_prototypes(first_func_flag);
+
+	//shuffle order
+	for (int i = arr_funcs_cnt - 1; i > 0; i--) {
+		int j = rand() % (i + 1);
+		funcs temp = arr_func[i];
+		arr_func[i] = arr_func[j];
+		arr_func[j] = temp;
+	}
 
 }
 
